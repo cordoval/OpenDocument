@@ -17,7 +17,7 @@ require_once 'OpenDocument/Manifest.php';
 require_once 'OpenDocument/Storage.php';
 
 /**
- * Zip storage - the default OpenDocument storage.
+ * Zip storage - the default OpenDocument Packages storage.
  * Creates one zip file containing several XML files.
  *
  * @category File_Formats
@@ -26,8 +26,8 @@ require_once 'OpenDocument/Storage.php';
  * @license  http://www.gnu.org/copyleft/lesser.html Lesser General Public License 2.1
  * @link     http://pear.php.net/package/OpenDocument
  */
-class OpenDocument_Storage_Zip implements OpenDocument_Storage
-{
+class OpenDocumentPackage_Storage_Zip implements OpenDocumentPackage_Storage {
+
     /**
      * File name to store file as
      *
@@ -43,65 +43,13 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
     protected $zip = null;
 
     /**
-     * DOM document containing the content
+     * DOM document containing the manifest data
      *
      * @var DOMDocument
      */
-    protected $contentDom = null;
-
-    /**
-     * DOM document containing the meta data
-     *
-     * @var DOMDocument
-     */
-    protected $metaDom = null;
-
-    /**
-     * DOM document containing the settings
-     *
-     * @var DOMDocument
-     */
-    protected $settingsDom = null;
-
-    /**
-     * DOM document containing the styles
-     *
-     * @var DOMDocument
-     */
-    protected $stylesDom = null;
-
-
-
-    /**
-     * Creates a new file.
-     * The file name may be passed, but can be omitted if the
-     * final storage location is not known yet.
-     *
-     * Storage drivers may choose to create temporary files or
-     * directories in case no file name is given here.
-     *
-     * @param string $type Document type ('text', 'spreadsheet')
-     * @param string $file Name of the file to be created
-     *
-     * @return void
-     *
-     * @throws OpenDocument_Exception In case creating the given file
-     *                                is not possible.
-     */
-    public function create($type, $file = null)
-    {
-        if ($file !== null) {
-            $this->checkWritability($file);
-        }
-
-        //load file content
-        $this->loadFile(self::getTemplateFile($type));
-
-        //reset file name to our new file to prevent overwriting the template
-        $this->file = $file;
-    }//public function create(..)
-
-
+    protected $manifestDom = null;
+	
+    protected $mimetype;
 
     /**
      * Opens the given file, loading the XML into memory
@@ -162,8 +110,6 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
         throw new OpenDocument_Exception('File is not readable: ' . $file);
     }
 
-
-
     /**
      * Loads content of the given file.
      *
@@ -178,20 +124,24 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      * @throws OpenDocument_Exception When the file is corrupt or
      *                                does not exist.
      */
-    protected function loadFile($file)
+	protected function loadFile($file)
     {
         $this->zip = new ZipArchive();
+        
         if ($this->zip->open($file) !== true) {
             throw new OpenDocument_Exception('Cannot open ZIP file: ' . $file);
         }
-        $this->contentDom  = $this->loadDomFromZip($this->zip, 'content.xml');
-        $this->metaDom     = $this->loadDomFromZip($this->zip, 'meta.xml');
-        $this->settingsDom = $this->loadDomFromZip($this->zip, 'settings.xml');
-        $this->stylesDom   = $this->loadDomFromZip($this->zip, 'styles.xml');
-        //FIXME: what to do with embedded files (e.g. images)?
+        $this->manifestDom     = $this->loadDomFromZip($this->zip, 'META-INF/manifest.xml');
+        
+        // load from included 'mimetype' file contents.
+        // may need to load from manifest file
+        $file = 'mimetype';
+        $index = $this->zip->locateName($file);
+        if ($index === false) {
+            throw new OpenDocument_Exception('File not found in zip: ' . $file);
+        }
+        $this->mimetype = $this->zip->getFromIndex($index);
     }
-
-
 
     /**
      * Loads the DOM document of the given file name from the zip archive
@@ -226,67 +176,21 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      */
     public function getMimeType()
     {
-        // load from included 'mimetype' file contents.
-        // may need to load from manifest file
-        $file = 'mimetype';
-        $index = $this->zip->locateName($file);
-        if ($index === false) {
-            throw new OpenDocument_Exception('File not found in zip: ' . $file);
-        }
-        $mimetype = $this->zip->getFromIndex($index);
-        return $mimetype;
-
+        return $this->mimetype;
     }
-
-
-
-    /**
-     * Returns the DOM object containing the content.
-     *
-     * @return DOMDocument
-     */
-    public function getContentDom()
-    {
-        return $this->contentDom;
-    }
-
-
 
     /**
      * Returns the DOM object containing the meta data.
      *
      * @return DOMDocument
      */
-    public function getMetaDom()
+    public function getManifestDom()
     {
-        return $this->metaDom;
+        return $this->manifestDom;
     }
+    
 
-
-
-    /**
-     * Returns the DOM object containing the settings.
-     *
-     * @return DOMDocument
-     */
-    public function getSettingsDom()
-    {
-        return $this->settingsDom;
-    }
-
-
-
-    /**
-     * Returns the DOM object containing the styles.
-     *
-     * @return DOMDocument
-     */
-    public function getStylesDom()
-    {
-        return $this->stylesDom;
-    }
-
-
+    // FIXME : save()
 
     /**
      * Saves the file as the given file name.
@@ -323,12 +227,216 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
         }
         //as soon as ZipArchive exposes compression options,
         // FIXME this and make it uncompressed
-        $mimetype = $this->getMimeTypeFromContent($this->contentDom);
+        $mimetype = $this->getMimeType();
         $zip->addFromString('mimetype', $mimetype);
 
         $manifest = new OpenDocument_Manifest();
         $manifest->addMimeType($mimetype);
 
+        $this->saveContents($manifest, $zip);
+        
+        $zip->addFromString('META-INF/manifest.xml', (string)$manifest);
+
+        $zip->close();
+    }//public function save(..)
+    
+    protected function saveContents(& $manifest, & $zip) {
+        // FIXME do nothing more for the moment : this class standalone works in read only
+        
+    }
+
+    
+
+    /**
+     * Adds a file to the document.
+     * Returns the file name that has to be used to reference
+     * the file in the document content.
+     *
+     * @param string $path     File path
+     * @param string $mimetype MIME type of the file. Leave it null
+     *                         for auto detection.
+     *
+     * @return string Relative filename that has to be used to
+     *                reference the file in content.
+     *
+     * @see removeFile()
+     */
+    public function addFile($path, $mimetype = null)
+    {
+        throw new OpenDocument_Exception('Adding files not supported yet');
+    }
+
+
+
+    /**
+     * Removes an already added file from the document.
+     *
+     * @param string $relpath Relative path that was returned
+     *                        by addFile()
+     *
+     * @return void
+     *
+     * @see addFile()
+     */
+    public function removeFile($relpath)
+    {
+        throw new OpenDocument_Exception('Removing files not supported yet');
+    }
+
+    
+}
+
+/**
+ * Zip storage - the default OpenDocument storage.
+ * Creates one zip file containing several XML files.
+ *
+ * @category File_Formats
+ * @package  OpenDocument
+ * @author   Christian Weiske <cweiske@php.net>
+ * @license  http://www.gnu.org/copyleft/lesser.html Lesser General Public License 2.1
+ * @link     http://pear.php.net/package/OpenDocument
+ */
+class OpenDocument_Storage_Zip extends OpenDocumentPackage_Storage_Zip implements OpenDocument_Storage
+{
+    /**
+     * DOM document containing the content
+     *
+     * @var DOMDocument
+     */
+    protected $contentDom = null;
+
+    /**
+     * DOM document containing the meta data
+     *
+     * @var DOMDocument
+     */
+    protected $metaDom = null;
+
+    /**
+     * DOM document containing the settings
+     *
+     * @var DOMDocument
+     */
+    protected $settingsDom = null;
+
+    /**
+     * DOM document containing the styles
+     *
+     * @var DOMDocument
+     */
+    protected $stylesDom = null;
+
+    /**
+     * Creates a new file.
+     * The file name may be passed, but can be omitted if the
+     * final storage location is not known yet.
+     *
+     * Storage drivers may choose to create temporary files or
+     * directories in case no file name is given here.
+     *
+     * @param string $type Document type ('text', 'spreadsheet')
+     * @param string $file Name of the file to be created
+     *
+     * @return void
+     *
+     * @throws OpenDocument_Exception In case creating the given file
+     *                                is not possible.
+     */
+    public function create($type, $file = null)
+    {
+        if ($file !== null) {
+            $this->checkWritability($file);
+        }
+
+        //load file content
+        $this->loadFile(self::getTemplateFile($type));
+
+        //reset file name to our new file to prevent overwriting the template
+        $this->file = $file;
+    }//public function create(..)
+
+    /**
+     * Loads content of the given file.
+     *
+     * Sets $this->file to $file.
+     * One needs to make sure the file is readable before calling
+     * this method.
+     *
+     * @param string $file Filename
+     *
+     * @return void
+     *
+     * @throws OpenDocument_Exception When the file is corrupt or
+     *                                does not exist.
+     */
+    protected function loadFile($file)
+    {
+        parent::loadFile($file);
+        
+        $this->contentDom  = $this->loadDomFromZip($this->zip, 'content.xml');
+        $this->metaDom     = $this->loadDomFromZip($this->zip, 'meta.xml');
+        $this->settingsDom = $this->loadDomFromZip($this->zip, 'settings.xml');
+        $this->stylesDom   = $this->loadDomFromZip($this->zip, 'styles.xml');
+        //FIXME: what to do with embedded files (e.g. images)?
+    }
+
+    /**
+     * Returns the DOM object containing the content.
+     *
+     * @return DOMDocument
+     */
+    public function getContentDom()
+    {
+        return $this->contentDom;
+    }
+
+    /**
+     * Returns the DOM object containing the meta data.
+     *
+     * @return DOMDocument
+     */
+    public function getMetaDom()
+    {
+        return $this->metaDom;
+    }
+
+    /**
+     * Returns the DOM object containing the settings.
+     *
+     * @return DOMDocument
+     */
+    public function getSettingsDom()
+    {
+        return $this->settingsDom;
+    }
+
+    /**
+     * Returns the DOM object containing the styles.
+     *
+     * @return DOMDocument
+     */
+    public function getStylesDom()
+    {
+        return $this->stylesDom;
+    }
+
+    /**
+     * Saves the file as the given file name.
+     *
+     * @param string $file Path of the file to save.
+     *
+     * @return void
+     *
+     * @throws OpenDocument_Exception In case saving the file
+     *                                did not work.
+     *
+     * @see create()
+     * @see open()
+     */
+    protected function saveContents(& $manifest, & $zip) {
+        
+        parent::saveContents($manifest, $zip);
+        
         $manifest->addFile('content.xml', 'text/xml');
         $zip->addFromString('content.xml', $this->contentDom->saveXML());
 
@@ -343,13 +451,19 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
 
         //FIXME: add image files added with addFile()
 
-        $zip->addFromString('META-INF/manifest.xml', (string)$manifest);
-
-        $zip->close();
-    }//public function save(..)
+    }//public function saveContents(..)
 
 
-
+    /**
+     * Returns the MIME type of the opened file.
+     *
+     * @return string MIME Type.
+     */
+    public function getMimeType()
+    {
+        return $this->getMimeTypeFromContent($this->contentDom);
+    }
+    
     /**
      * Extracts the textual MIME type from the content DOM object
      *
@@ -426,44 +540,6 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
 
 
     /**
-     * Adds a file to the document.
-     * Returns the file name that has to be used to reference
-     * the file in the document content.
-     *
-     * @param string $path     File path
-     * @param string $mimetype MIME type of the file. Leave it null
-     *                         for auto detection.
-     *
-     * @return string Relative filename that has to be used to
-     *                reference the file in content.
-     *
-     * @see removeFile()
-     */
-    public function addFile($path, $mimetype = null)
-    {
-        throw new OpenDocument_Exception('Adding files not supported yet');
-    }
-
-
-
-    /**
-     * Removes an already added file from the document.
-     *
-     * @param string $relpath Relative path that was returned
-     *                        by addFile()
-     *
-     * @return void
-     *
-     * @see addFile()
-     */
-    public function removeFile($relpath)
-    {
-        throw new OpenDocument_Exception('Removing files not supported yet');
-    }
-
-
-
-    /**
      * Returns the path of a template file for the given file type.
      *
      * @param string $type File type ('text', 'spreadsheet')
@@ -518,5 +594,16 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
         //FIXME: mime type
     }
 }
+    /*
+	public function loadContentsFromZip($filepath)
+    {
+        $index = $this->zip->locateName($filepath);
+        if ($index === false) {
+            throw new OpenDocument_Exception('File not found in zip: ' . $filepath);
+        }
+
+        return $this->zip->getFromIndex($index);
+    }
+*/
 
 ?>
