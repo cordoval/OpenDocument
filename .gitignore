@@ -4,3 +4,5 @@ tests/*.diff
 tests/*.exp
 tests/*.out
 tests/*.php
+!tests/AllTests.php
+!tests/ODTestSuite.php
