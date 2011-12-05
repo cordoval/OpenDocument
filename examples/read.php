@@ -14,5 +14,5 @@ foreach ($odt->getChildren() as $child) {
 
 //save as no_headings.pdt
 $odt->save('no_headings.odt');
-echo "saved as no-headings.odt\n";
+echo "saved as no_headings.odt\n";
 ?>

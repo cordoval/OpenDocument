@@ -1,7 +1,7 @@
 <?php
 /**
 * PEAR OpenDocument package
-* 
+*
 * PHP version 5
 *
 * @category File_Formats
@@ -70,6 +70,13 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      */
     protected $stylesDom = null;
 
+    /**
+     * MIME Type of the file, i.e. "application/vnd.oasis.opendocument.text"
+     *
+     * @var string
+     */
+    protected $mimeType = null;
+
 
 
     /**
@@ -110,9 +117,8 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      *
      * @return void
      *
-     * @throws OpenDocument_Exception In case loading the file
-     *                                did not work or the file
-     *                                does not exist.
+     * @throws OpenDocument_Exception In case loading the file did not work or
+     *                                the file does not exist.
      *
      * @see create()
      */
@@ -180,15 +186,39 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      */
     protected function loadFile($file)
     {
-        $zip = new ZipArchive();
-        if ($zip->open($file) !== true) {
+        $this->zip = new ZipArchive();
+        if ($this->zip->open($file) !== true) {
             throw new OpenDocument_Exception('Cannot open ZIP file: ' . $file);
         }
-        $this->contentDom  = $this->loadDomFromZip($zip, 'content.xml');
-        $this->metaDom     = $this->loadDomFromZip($zip, 'meta.xml');
-        $this->settingsDom = $this->loadDomFromZip($zip, 'settings.xml');
-        $this->stylesDom   = $this->loadDomFromZip($zip, 'styles.xml');
+        $this->contentDom  = $this->loadDomFromZip('content.xml');
+        $this->metaDom     = $this->loadDomFromZip('meta.xml');
+        $this->settingsDom = $this->loadDomFromZip('settings.xml');
+        $this->stylesDom   = $this->loadDomFromZip('styles.xml');
+        $this->mimeType    = $this->loadFromZip('mimetype');
         //FIXME: what to do with embedded files (e.g. images)?
+    }
+
+
+
+    /**
+     * Loads the contents of a file from within the zip file
+     *
+     * @param string $file Relative path of file to load from zip
+     *
+     * @return string Contents of the file
+     *
+     * @throws OpenDocument_Exception In case the file does not exist in
+     *                                the zip.
+     * @uses   $zip
+     */
+    protected function loadFromZip($file)
+    {
+        // may need to load from manifest file
+        $index = $this->zip->locateName($file);
+        if ($index === false) {
+            throw new OpenDocument_Exception('File not found in zip: ' . $file);
+        }
+        return $this->zip->getFromIndex($index);
     }
 
 
@@ -196,23 +226,18 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
     /**
      * Loads the DOM document of the given file name from the zip archive
      *
-     * @param ZipArchive $zip  Opened ZIP file object
-     * @param string     $file Relative path of file to load from zip
+     * @param string $file Relative path of file to load from zip
      *
      * @return DOMDocument Document of XML file
      *
-     * @throws OpenDocument_Exception In case the file does not exist in 
+     * @throws OpenDocument_Exception In case the file does not exist in
      *                                the zip.
+     * @uses   $zip
      */
-    protected function loadDomFromZip(ZipArchive $zip, $file)
+    protected function loadDomFromZip($file)
     {
-        $index = $zip->locateName($file);
-        if ($index === false) {
-            throw new OpenDocument_Exception('File not found in zip: ' . $file);
-        }
-
         $dom = new DOMDocument();
-        $dom->loadXML($zip->getFromIndex($index));
+        $dom->loadXML($this->loadFromZip($file));
 
         return $dom;
     }
@@ -226,10 +251,7 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
      */
     public function getMimeType()
     {
-        //FIXME: implement functionality
-        //load from manifest first
-        //if null, load from content
-        return 'application/vnd.oasis.opendocument.text';
+        return $this->mimeType;
     }
 
 
@@ -508,8 +530,9 @@ class OpenDocument_Storage_Zip implements OpenDocument_Storage
         $this->setMetaDom($storage->getMetaDom());
         $this->setSettingsDom($storage->getSettingsDom());
         $this->setStylesDom($storage->getStylesDom());
+
+        $this->mimeType = $storage->getMimeType();
         //FIXME: files
-        //FIXME: mime type
     }
 }
 

@@ -1,0 +1,6 @@
+run-tests.log
+tests/*.log
+tests/*.diff
+tests/*.exp
+tests/*.out
+tests/*.php
