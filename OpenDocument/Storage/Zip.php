@@ -13,8 +13,8 @@
 * @since    File available since Release 0.2.0
 */
 
-require_once 'OpenDocument/Manifest.php';
-require_once 'OpenDocument/Storage.php';
+//require_once 'OpenDocument/Manifest.php';
+//require_once 'OpenDocument/Storage.php';
 
 /**
  * Zip storage - the default OpenDocument storage.

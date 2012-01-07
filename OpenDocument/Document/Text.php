@@ -28,13 +28,13 @@
 * @since    File available since Release 0.1.0
 */
 
-require_once 'OpenDocument/Document.php';
+/*require_once 'OpenDocument/Document.php';
 require_once 'OpenDocument/Element/Text.php';
 require_once 'OpenDocument/Element/Span.php';
 require_once 'OpenDocument/Element/Paragraph.php';
 require_once 'OpenDocument/Element/Heading.php';
 require_once 'OpenDocument/Element/Bookmark.php';
-require_once 'OpenDocument/Element/Hyperlink.php';
+require_once 'OpenDocument/Element/Hyperlink.php';*/
 
 /**
 * Text document

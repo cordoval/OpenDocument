@@ -26,8 +26,8 @@
 * @link     http://pear.php.net/package/OpenDocument
 */
 
-require_once 'OpenDocument/Element.php';
-require_once 'OpenDocument/ElementStyle.php';
+/*require_once 'OpenDocument/Element.php';
+require_once 'OpenDocument/ElementStyle.php';*/
 
 /**
 * Base class for elements with styles
