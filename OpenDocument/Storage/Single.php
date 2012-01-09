@@ -304,8 +304,6 @@ class OpenDocument_Storage_Single implements OpenDocument_Storage
         return $this->stylesDom;
     }
 
-
-
     /**
      * Saves the file as the given file name.
      *
@@ -324,11 +322,11 @@ class OpenDocument_Storage_Single implements OpenDocument_Storage
         if ($file === null) {
             $file = $this->file;
         }
-        if ($file === null) {
+        /*if ($file === null) {
             throw new OpenDocument_Exception(
                 'No file name given for saving'
             );
-        }
+        }*/
 
         $dom = new DOMDocument('1.0', 'utf-8');
         $root = $dom->createElementNS(
@@ -352,9 +350,13 @@ class OpenDocument_Storage_Single implements OpenDocument_Storage
             }
         }
 
+        if ($file === null) {
+            return $dom->saveXML();
+        }
         //set mime type
         //FIXME: set mime type
         $bytes = $dom->save($file);
+
         if ($bytes === false) {
             throw new OpenDocument_Exception('Saving failed');
         }
