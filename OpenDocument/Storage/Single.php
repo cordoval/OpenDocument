@@ -13,8 +13,8 @@
 * @since    File available since Release 0.2.0
 */
 
-require_once 'OpenDocument/Manifest.php';
-require_once 'OpenDocument/Storage.php';
+//require_once 'OpenDocument/Manifest.php';
+//require_once 'OpenDocument/Storage.php';
 
 /**
  * Single XML file storage driver.
@@ -88,7 +88,7 @@ class OpenDocument_Storage_Single implements OpenDocument_Storage
             $this->checkWritability($file);
         }
 
-        include_once 'OpenDocument/Storage/Zip.php';
+        //include_once 'OpenDocument/Storage/Zip.php';
         $zipstore = new OpenDocument_Storage_Zip();
         $zipstore->create($type);
         $this->import($zipstore);

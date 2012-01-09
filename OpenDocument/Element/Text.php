@@ -27,7 +27,7 @@
 * @since    File available since Release 0.1.0
 */
 
-require_once 'OpenDocument/Element.php';
+//require_once 'OpenDocument/Element.php';
 
 /**
 * Plain text element
